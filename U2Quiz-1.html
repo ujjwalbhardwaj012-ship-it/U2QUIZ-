@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>U2Quiz — Photo to Quiz</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6fb;color:#172033}
+header{background:#5b4bdb;color:white;padding:22px 18px;text-align:center}
+header h1{margin:0;font-size:30px}header p{margin:7px 0 0;opacity:.9}
+.wrap{max-width:900px;margin:25px auto;padding:0 15px}
+.card{background:white;border-radius:18px;padding:22px;margin-bottom:18px;box-shadow:0 5px 20px #00000010}
+h2{margin-top:0}.drop{border:2px dashed #9b91e8;border-radius:15px;padding:35px 15px;text-align:center;background:#faf9ff}
+input[type=file]{display:none}.btn{border:0;border-radius:10px;padding:12px 18px;background:#5b4bdb;color:#fff;font-weight:bold;cursor:pointer;margin:5px}
+.btn.secondary{background:#e9e7ff;color:#4337a8}.btn:disabled{opacity:.5;cursor:not-allowed}
+#files{margin-top:15px}.file{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.rule{background:#f7f7fb;padding:13px;border-radius:12px}
+.status{padding:12px;border-radius:10px;background:#eef7ee;margin-top:15px;display:none}
+.quiz{display:none}.qbox{font-size:20px;font-weight:bold;line-height:1.45}.option{display:block;width:100%;text-align:left;background:#fff;border:2px solid #ddd;padding:14px;border-radius:12px;margin:10px 0;cursor:pointer;font-size:16px}.option:hover{border-color:#5b4bdb}.option.selected{border-color:#5b4bdb;background:#f1efff}
+.nav{display:flex;justify-content:space-between;margin-top:18px}.progress{height:8px;background:#eee;border-radius:20px;overflow:hidden;margin:15px 0}.bar{height:100%;background:#5b4bdb;width:0}
+.result{display:none;text-align:center}.score{font-size:42px;font-weight:bold;color:#5b4bdb}.small{color:#667085;font-size:14px}
+</style>
+</head>
+<body>
+<header><h1>U2Quiz</h1><p>Upload your study pages → Make a quiz</p></header>
+
+<div class="wrap">
+<section class="card" id="setup">
+<h2>📸 Pages Upload Karo</h2>
+<div class="drop">
+<label class="btn" for="photos">1–5 Photos Select Karo</label>
+<input id="photos" type="file" accept="image/*" multiple>
+<p class="small">Ek quiz ke liye maximum 5 pages</p>
+</div>
+<div id="files"></div>
+<div class="rules">
+<div class="rule">🔒 Source: Sirf uploaded pages</div>
+<div class="rule">♻️ Same quiz me repeat nahi</div>
+<div class="rule">🎯 Maximum 50 questions</div>
+<div class="rule">🌐 Hindi + English</div><div class="rule">📊 Result + score</div>
+</div>
+<button class="btn" id="generate" disabled>Generate Quiz</button>
+<div class="status" id="status"></div>
+</section>
+
+<section class="card quiz" id="quiz">
+<div class="small" id="counter"></div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="qbox" id="question"></div><div class="small" id="englishQuestion" style="margin-top:8px;font-size:16px"></div>
+<div id="options"></div>
+<div class="nav">
+<button class="btn secondary" id="prev">Previous</button>
+<button class="btn" id="next">Next</button>
+</div>
+</section>
+
+<section class="card result" id="result">
+<h2>Quiz Complete 🎉</h2>
+<div class="score" id="score"></div>
+<p id="details"></p>
+<button class="btn" onclick="location.reload()">New Quiz</button>
+</section>
+</div>
+
+<script>
+const photos=document.getElementById('photos'), filesBox=document.getElementById('files');
+const generate=document.getElementById('generate'), status=document.getElementById('status');
+let selectedFiles=[];
+
+photos.addEventListener('change',()=>{
+ selectedFiles=[...photos.files].slice(0,5);
+ filesBox.innerHTML=selectedFiles.map((f,i)=>`<div class="file"><span>${i+1}. ${f.name}</span><span>${Math.round(f.size/1024)} KB</span></div>`).join('');
+ generate.disabled=selectedFiles.length===0;
+ if(photos.files.length>5) statusText('Sirf pehli 5 photos li gayi hain.');
+});
+
+function statusText(t){status.style.display='block';status.textContent=t;}
+
+generate.onclick=()=>{
+ statusText('Prototype ready hai. Final version me photo se questions Hindi + English dono me AI/OCR se generate honge.');
+ // Demo questions show the quiz interface; real questions must come from an OCR/AI backend.
+ quizStart(demoQuestions);
+};
+
+const demoQuestions=[
+ {q:"Demo: Upload ki gayi study page se question generate karne ke liye kis technology ki zarurat hogi?",en:"Demo: Which technology is needed to generate questions from an uploaded study page?",o:["OCR + AI","Sirf calculator","Sirf Bluetooth","Sirf printer"],a:0},
+ {q:"Demo: U2Quiz ek quiz me questions ko kaise handle karega?",en:"Demo: How will U2Quiz handle questions within one quiz?",o:["Repeat nahi karega","Har question 5 baar dega","Sirf 1 question dega","Questions delete karega"],a:0},
+ {q:"Demo: Ek quiz me maximum kitne questions rakhe jayenge?",en:"Demo: What is the maximum number of questions allowed in one quiz?",o:["50","5","100","500"],a:0}
+];
+
+let quiz=[],idx=0,answers=[];
+function quizStart(data){
+ quiz=data; idx=0; answers=new Array(quiz.length).fill(null);
+ document.getElementById('setup').style.display='none';
+ document.getElementById('quiz').style.display='block';
+ render();
+}
+function render(){
+ const item=quiz[idx];
+ document.getElementById('counter').textContent=`Question ${idx+1} / ${quiz.length}`;
+ document.getElementById('bar').style.width=((idx+1)/quiz.length*100)+'%';
+ document.getElementById('question').textContent=item.q;
+ document.getElementById('englishQuestion').textContent=item.en || "";
+ const box=document.getElementById('options'); box.innerHTML='';
+ item.o.forEach((x,i)=>{
+  const b=document.createElement('button'); b.className='option'+(answers[idx]===i?' selected':'');
+  b.textContent=String.fromCharCode(65+i)+'. '+x;
+  b.onclick=()=>{answers[idx]=i;render()};
+  box.appendChild(b);
+ });
+ document.getElementById('prev').disabled=idx===0;
+ document.getElementById('next').textContent=idx===quiz.length-1?'Finish':'Next';
+}
+document.getElementById('prev').onclick=()=>{if(idx>0){idx--;render()}};
+document.getElementById('next').onclick=()=>{
+ if(answers[idx]===null){alert('Pehle answer select karo.');return}
+ if(idx<quiz.length-1){idx++;render()}else finish();
+};
+function finish(){
+ let correct=quiz.reduce((n,x,i)=>n+(answers[i]===x.a?1:0),0);
+ document.getElementById('quiz').style.display='none';
+ document.getElementById('result').style.display='block';
+ document.getElementById('score').textContent=`${correct} / ${quiz.length}`;
+ document.getElementById('details').textContent=`Accuracy: ${Math.round(correct/quiz.length*100)}%`;
+}
+</script>
+</body>
+</html>
